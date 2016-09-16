@@ -11,11 +11,15 @@ import android.view.View;
 
 // Add this to the header of your file:
 import com.facebook.AccessToken;
+import com.facebook.CallbackManager;
+import com.facebook.FacebookCallback;
+import com.facebook.FacebookException;
 import com.facebook.FacebookSdk;
 import com.facebook.GraphRequest;
 import com.facebook.GraphResponse;
 import com.facebook.appevents.AppEventsLogger;
 import com.facebook.login.LoginManager;
+import com.facebook.login.LoginResult;
 import com.facebook.login.widget.LoginButton;
 
 
@@ -52,14 +56,16 @@ public class FullscreenActivity extends AppCompatActivity {
     private View mControlsView;
     private boolean mVisible;
     private LoginButton mLoginButton;
+    private CallbackManager callbackManager;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        setContentView(R.layout.activity_fullscreen);
+
 
         // Initialize the SDK before executing any other operations,
         setupFBSDK();
+        setContentView(R.layout.activity_fullscreen);
 
 
 
@@ -72,6 +78,7 @@ public class FullscreenActivity extends AppCompatActivity {
 //        If using in a fragment
 //        mLoginButton.setFragment(this);
         // Other app specific specialization
+
 
 
         // Set up the user interaction to manually show or hide the system UI.
@@ -120,12 +127,36 @@ public class FullscreenActivity extends AppCompatActivity {
     protected void setupFBSDK (){
 
         FacebookSdk.sdkInitialize(getApplicationContext());
-        AppEventsLogger.activateApp(this);
+        // AppEventsLogger.activateApp(this);
 
-        LoginManager.getInstance().logInWithPublishPermissions(
+        callbackManager = CallbackManager.Factory.create();
+
+        LoginManager loginManager = LoginManager.getInstance();
+        loginManager.logInWithPublishPermissions(
             this,
             Arrays.asList("publish_actions")
         );
+
+
+        loginManager.registerCallback(
+            callbackManager,
+            new FacebookCallback<LoginResult>() {
+                @Override
+                public void onSuccess(LoginResult loginResult) {
+                    // App code
+                }
+
+                @Override
+                public void onCancel() {
+                    // App code
+                }
+
+                @Override
+                public void onError(FacebookException exception) {
+                    // App code
+                    exception.printStackTrace();
+                }
+            });
 
     }
 

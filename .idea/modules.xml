@@ -2,7 +2,7 @@
 <project version="4">
   <component name="ProjectModuleManager">
     <modules>
-      <module fileurl="file://$PROJECT_DIR$/FacebookLiveStreamwithbluetoothaudio.iml" filepath="$PROJECT_DIR$/FacebookLiveStreamwithbluetoothaudio.iml" />
+      <module fileurl="file://$PROJECT_DIR$/Facebook-Live-Stream-with-Bluetooth-Audio.iml" filepath="$PROJECT_DIR$/Facebook-Live-Stream-with-Bluetooth-Audio.iml" />
       <module fileurl="file://$PROJECT_DIR$/app/app.iml" filepath="$PROJECT_DIR$/app/app.iml" />
     </modules>
   </component>
