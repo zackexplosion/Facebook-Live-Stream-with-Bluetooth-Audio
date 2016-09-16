@@ -1,0 +1,7 @@
+<resources>
+    <string name="app_name">Facebook Live Stream with Bluetooth Audio</string>
+
+    <string name="dummy_button">Dummy Button</string>
+    <string name="dummy_content">DUMMY\nCONTENT</string>
+    <string name="facebook_app_id">1759798604244949</string>
+</resources>
