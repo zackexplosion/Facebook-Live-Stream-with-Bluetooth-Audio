@@ -1,6 +1,7 @@
 package com.explosion.zack.facebooklivestreamwithbluetoothaudio;
 
 import android.annotation.SuppressLint;
+import android.content.Intent;
 import android.support.v7.app.ActionBar;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
@@ -125,6 +126,13 @@ public class FullscreenActivity extends AppCompatActivity {
         request.executeAsync();
     }
 
+    @Override
+    public void onActivityResult(int requestCode, int resultCode, Intent data) {
+        super.onActivityResult(requestCode, resultCode, data);
+        callbackManager.onActivityResult(requestCode,
+                resultCode, data);
+    }
+
     protected void setupFBSDK (){
 
         FacebookSdk.sdkInitialize(getApplicationContext());
@@ -133,10 +141,10 @@ public class FullscreenActivity extends AppCompatActivity {
         callbackManager = CallbackManager.Factory.create();
 
         LoginManager loginManager = LoginManager.getInstance();
-        loginManager.logInWithPublishPermissions(
-            this,
-            Arrays.asList("publish_actions")
-        );
+//        loginManager.logInWithPublishPermissions(
+//            this,
+//            Arrays.asList("publish_actions")
+//        );
 
 
         loginManager.registerCallback(
@@ -216,6 +224,7 @@ public class FullscreenActivity extends AppCompatActivity {
             show();
         }
     }
+
 
     private void hide() {
         // Hide UI first
