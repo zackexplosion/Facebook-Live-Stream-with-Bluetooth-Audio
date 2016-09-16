@@ -56,17 +56,12 @@ public class FullscreenActivity extends AppCompatActivity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        setContentView(R.layout.activity_fullscreen);
 
         // Initialize the SDK before executing any other operations,
-        // setupFBSDK();
+        setupFBSDK();
 
-        FacebookSdk.sdkInitialize(getApplicationContext());
-        AppEventsLogger.activateApp(this);
-        LoginManager.getInstance().logInWithPublishPermissions(
-                this,
-                Arrays.asList("publish_actions"));
 
-        setContentView(R.layout.activity_fullscreen);
 
         mVisible = true;
         mControlsView = findViewById(R.id.fullscreen_content_controls);
