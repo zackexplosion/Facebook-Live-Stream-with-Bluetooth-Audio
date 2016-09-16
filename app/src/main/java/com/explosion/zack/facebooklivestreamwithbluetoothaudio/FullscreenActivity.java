@@ -5,16 +5,25 @@ import android.support.v7.app.ActionBar;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.os.Handler;
+import android.util.Log;
 import android.view.MotionEvent;
 import android.view.View;
 
 // Add this to the header of your file:
+import com.facebook.AccessToken;
 import com.facebook.FacebookSdk;
+import com.facebook.GraphRequest;
+import com.facebook.GraphResponse;
 import com.facebook.appevents.AppEventsLogger;
+import com.facebook.login.LoginManager;
+import com.facebook.login.widget.LoginButton;
 
 
 import net.butterflytv.rtmp_client.RtmpClient;
 
+import org.json.JSONObject;
+
+import java.util.Arrays;
 
 
 /**
@@ -39,18 +48,17 @@ public class FullscreenActivity extends AppCompatActivity {
      * and a change of the status and navigation bar.
      */
     private static final int UI_ANIMATION_DELAY = 300;
-
     private View mContentView;
     private View mControlsView;
     private boolean mVisible;
+    private LoginButton mLoginButton;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
 
         // Initialize the SDK before executing any other operations,
-        FacebookSdk.sdkInitialize(getApplicationContext());
-        AppEventsLogger.activateApp(this);
+        setupFBSDK();
 
         setContentView(R.layout.activity_fullscreen);
 
@@ -58,25 +66,72 @@ public class FullscreenActivity extends AppCompatActivity {
         mControlsView = findViewById(R.id.fullscreen_content_controls);
         mContentView = findViewById(R.id.fullscreen_content);
 
+//        mLoginButton = (LoginButton) findViewById(R.id.login_button);
+//        mLoginButton.setReadPermissions("publish_actions");
+//        If using in a fragment
+//        mLoginButton.setFragment(this);
+        // Other app specific specialization
+
 
         // Set up the user interaction to manually show or hide the system UI.
         mContentView.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-                toggle();
+                // toggle();
+                fbGraphTest();
             }
         });
 
         // Upon interacting with UI controls, delay any scheduled hide()
         // operations to prevent the jarring behavior of controls going away
         // while interacting with the UI.
-        findViewById(R.id.dummy_button).setOnTouchListener(mDelayHideTouchListener);
-        createRtmpClient();
+        // findViewById(R.id.dummy_button).setOnTouchListener(mDelayHideTouchListener);
+        // createRtmpClient();
+    }
+
+    public static final String FB_TEST_LOG_TAG = "fbgrapth";
+    private void fbGraphTest() {
+
+
+        AccessToken accessToken = AccessToken.getCurrentAccessToken();
+        JSONObject params = null;
+        try{
+            params = new JSONObject("{}");
+        }catch (Exception e){
+            Log.e("fuck", "fucking json object creation failed!");
+            Log.e("fuck", "this error handle sucks");
+        }
+
+        GraphRequest request = GraphRequest.newPostRequest(
+            accessToken,
+            "/me/live_videos",
+            params,
+            new GraphRequest.Callback() {
+                @Override
+                public void onCompleted(GraphResponse response) {
+                    // Insert your code here
+                    createRtmpClient(response);
+                }
+            });
+        request.executeAsync();
+    }
+
+    protected void setupFBSDK (){
+
+        FacebookSdk.sdkInitialize(getApplicationContext());
+        AppEventsLogger.activateApp(this);
+
+        LoginManager.getInstance().logInWithPublishPermissions(
+            this,
+            Arrays.asList("publish_actions")
+        );
+
     }
 
     protected void facebookLogin(){
     }
-    protected void createRtmpClient(){
+    protected void createRtmpClient(GraphResponse response){
+        Log.d("fb live", response.toString());
         /* make the API call */
 //        new GraphRequest(
 //                AccessToken.getCurrentAccessToken(),
@@ -102,7 +157,7 @@ public class FullscreenActivity extends AppCompatActivity {
         // Trigger the initial hide() shortly after the activity has been
         // created, to briefly hint to the user that UI controls
         // are available.
-        delayedHide(100);
+        // delayedHide(100);
     }
 
     /**
