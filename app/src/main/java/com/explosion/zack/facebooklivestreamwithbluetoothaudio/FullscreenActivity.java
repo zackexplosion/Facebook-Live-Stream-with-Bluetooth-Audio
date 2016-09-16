@@ -52,6 +52,7 @@ public class FullscreenActivity extends AppCompatActivity {
      * and a change of the status and navigation bar.
      */
     private static final int UI_ANIMATION_DELAY = 300;
+    private static final String LOG_TAG = "FBSDK";
     private View mContentView;
     private View mControlsView;
     private boolean mVisible;
@@ -143,7 +144,7 @@ public class FullscreenActivity extends AppCompatActivity {
             new FacebookCallback<LoginResult>() {
                 @Override
                 public void onSuccess(LoginResult loginResult) {
-                    // App code
+                    Log.d(LOG_TAG, "login success" + loginResult.toString());
                 }
 
                 @Override
@@ -155,6 +156,7 @@ public class FullscreenActivity extends AppCompatActivity {
                 public void onError(FacebookException exception) {
                     // App code
                     exception.printStackTrace();
+                    Log.e(LOG_TAG, "login error");
                 }
             });
 
