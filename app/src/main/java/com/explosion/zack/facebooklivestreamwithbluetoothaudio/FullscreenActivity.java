@@ -58,7 +58,13 @@ public class FullscreenActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
 
         // Initialize the SDK before executing any other operations,
-        setupFBSDK();
+        // setupFBSDK();
+
+        FacebookSdk.sdkInitialize(getApplicationContext());
+        AppEventsLogger.activateApp(this);
+        LoginManager.getInstance().logInWithPublishPermissions(
+                this,
+                Arrays.asList("publish_actions"));
 
         setContentView(R.layout.activity_fullscreen);
 
@@ -110,7 +116,7 @@ public class FullscreenActivity extends AppCompatActivity {
                 @Override
                 public void onCompleted(GraphResponse response) {
                     // Insert your code here
-                    createRtmpClient(response);
+                    createRTMPClient(response);
                 }
             });
         request.executeAsync();
@@ -130,7 +136,7 @@ public class FullscreenActivity extends AppCompatActivity {
 
     protected void facebookLogin(){
     }
-    protected void createRtmpClient(GraphResponse response){
+    protected void createRTMPClient(GraphResponse response){
         Log.d("fb live", response.toString());
         /* make the API call */
 //        new GraphRequest(
