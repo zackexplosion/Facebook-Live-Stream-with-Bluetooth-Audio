@@ -23,12 +23,14 @@ import com.facebook.login.LoginManager;
 import com.facebook.login.LoginResult;
 import com.facebook.login.widget.LoginButton;
 
+import net.butterflytv.rtmp_client.RTMPMuxer;
 
-import net.butterflytv.rtmp_client.RtmpClient;
-
+import org.json.JSONException;
 import org.json.JSONObject;
 
 import java.util.Arrays;
+import java.util.Timer;
+import java.util.TimerTask;
 
 
 /**
@@ -70,7 +72,6 @@ public class FullscreenActivity extends AppCompatActivity {
         setContentView(R.layout.activity_fullscreen);
 
 
-
         mVisible = true;
         mControlsView = findViewById(R.id.fullscreen_content_controls);
         mContentView = findViewById(R.id.fullscreen_content);
@@ -82,58 +83,64 @@ public class FullscreenActivity extends AppCompatActivity {
         // Other app specific specialization
 
 
-
         // Set up the user interaction to manually show or hide the system UI.
         mContentView.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
                 // toggle();
-                fbGraphTest();
+//                createRTMPClient();
             }
         });
 
-        // Upon interacting with UI controls, delay any scheduled hide()
-        // operations to prevent the jarring behavior of controls going away
-        // while interacting with the UI.
-        // findViewById(R.id.dummy_button).setOnTouchListener(mDelayHideTouchListener);
-        // createRtmpClient();
-    }
+//         Upon interacting with UI controls, delay any scheduled hide()
+//         operations to prevent the jarring behavior of controls going away
+//         while interacting with the UI.
+//         findViewById(R.id.dummy_button).setOnTouchListener(mDelayHideTouchListener);
+//         createRtmpClient();
+        findViewById(R.id.dummy_button).setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                AccessToken accessToken = AccessToken.getCurrentAccessToken();
 
-    public static final String FB_TEST_LOG_TAG = "fbgrapth";
-    private void fbGraphTest() {
-
-
-        AccessToken accessToken = AccessToken.getCurrentAccessToken();
-        JSONObject params = null;
-        try{
-            params = new JSONObject("{}");
-        }catch (Exception e){
-            Log.e("fuck", "fucking json object creation failed!");
-            Log.e("fuck", "this error handle sucks");
-        }
-
-        GraphRequest request = GraphRequest.newPostRequest(
-            accessToken,
-            "/me/live_videos",
-            params,
-            new GraphRequest.Callback() {
-                @Override
-                public void onCompleted(GraphResponse response) {
-                    // Insert your code here
-                    createRTMPClient(response);
+                if (accessToken == null){
+                    Log.e(LOG_TAG, "not login");
+                    return;
+                }else{
+                    Log.d(LOG_TAG, "access token is " + accessToken.toString());
                 }
-            });
-        request.executeAsync();
+
+                JSONObject params = null;
+                try {
+                    params = new JSONObject("{}");
+                } catch (Exception e) {
+                    Log.e("fuck", "fucking json object creation failed!");
+                    Log.e("fuck", "this error handle sucks");
+                }
+
+                GraphRequest request = GraphRequest.newPostRequest(
+                        accessToken,
+                        "/me/live_videos",
+                        params,
+                        new GraphRequest.Callback() {
+                            @Override
+                            public void onCompleted(GraphResponse response) {
+                                // Insert your code here
+                                createRTMPClient(response);
+                            }
+                        });
+                request.executeAsync();
+            }
+        });
     }
+
 
     @Override
     public void onActivityResult(int requestCode, int resultCode, Intent data) {
         super.onActivityResult(requestCode, resultCode, data);
-        callbackManager.onActivityResult(requestCode,
-                resultCode, data);
+        callbackManager.onActivityResult(requestCode, resultCode, data);
     }
 
-    protected void setupFBSDK (){
+    protected void setupFBSDK() {
 
         FacebookSdk.sdkInitialize(getApplicationContext());
         // AppEventsLogger.activateApp(this);
@@ -141,55 +148,63 @@ public class FullscreenActivity extends AppCompatActivity {
         callbackManager = CallbackManager.Factory.create();
 
         LoginManager loginManager = LoginManager.getInstance();
-//        loginManager.logInWithPublishPermissions(
-//            this,
-//            Arrays.asList("publish_actions")
-//        );
+        loginManager.logInWithPublishPermissions(
+                this,
+                Arrays.asList("publish_actions")
+        );
 
 
         loginManager.registerCallback(
-            callbackManager,
-            new FacebookCallback<LoginResult>() {
-                @Override
-                public void onSuccess(LoginResult loginResult) {
-                    Log.d(LOG_TAG, "login success" + loginResult.toString());
-                }
+                callbackManager,
+                new FacebookCallback<LoginResult>() {
+                    @Override
+                    public void onSuccess(LoginResult loginResult) {
+                        Log.d(LOG_TAG, "login success" + loginResult.toString());
+                    }
 
-                @Override
-                public void onCancel() {
-                    // App code
-                }
+                    @Override
+                    public void onCancel() {
+                        // App code
+                    }
 
-                @Override
-                public void onError(FacebookException exception) {
-                    // App code
-                    exception.printStackTrace();
-                    Log.e(LOG_TAG, "login error");
-                }
-            });
+                    @Override
+                    public void onError(FacebookException exception) {
+                        // App code
+                        exception.printStackTrace();
+                        Log.e(LOG_TAG, "login error");
+                    }
+                });
 
     }
 
-    protected void facebookLogin(){
-    }
-    protected void createRTMPClient(GraphResponse response){
-        Log.d("fb live", response.toString());
-        /* make the API call */
-//        new GraphRequest(
-//                AccessToken.getCurrentAccessToken(),
-//                "/{live-video-id}",
-//                null,
-//                HttpMethod.GET,
-//                new GraphRequest.Callback() {
-//                    public void onCompleted(GraphResponse response) {
-//            /* handle the result */
-//                    }
-//                }
-//        ).executeAsync();
+    protected void createRTMPClient(GraphResponse response) {
+        String streamUrl = null;
+        try {
+            streamUrl = response.getJSONObject().get("stream_url").toString();
+        } catch (JSONException e) {
+            e.printStackTrace();
+        }
 
+        if(streamUrl == null){
+            Log.e(LOG_TAG, "stream url not set");
+            return;
+        }
 
-        RtmpClient mClient = new RtmpClient();
-//        mClient.open()
+        Log.d(LOG_TAG, "streamUrl: " + streamUrl);
+
+        final RTMPMuxer mMuxer = new RTMPMuxer();
+        mMuxer.open(streamUrl, 360, 480);
+
+        Timer timer = new Timer();
+
+        timer.schedule( new TimerTask() {
+            public void run() {
+                Integer isConnected = mMuxer.isConnected();
+
+                Log.d(LOG_TAG, "is connected? " + String.valueOf(isConnected));
+            }
+        }, 0, 1000);
+
     }
 
     @Override
