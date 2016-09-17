@@ -4,6 +4,8 @@ package com.explosion.zack.facebooklivestreamwithbluetoothaudio;
 import android.annotation.SuppressLint;
 import android.content.Intent;
 import android.hardware.Camera;
+import android.media.CamcorderProfile;
+import android.media.MediaRecorder;
 import android.support.v7.app.ActionBar;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
@@ -31,6 +33,7 @@ import net.butterflytv.rtmp_client.RTMPMuxer;
 import org.json.JSONException;
 import org.json.JSONObject;
 
+import java.io.IOException;
 import java.util.Arrays;
 import java.util.Timer;
 import java.util.TimerTask;
@@ -66,6 +69,8 @@ public class FullscreenActivity extends AppCompatActivity {
     private CallbackManager callbackManager;
     private Camera mCamera;
     private CameraPreview mPreview;
+    private MediaRecorder mMediaRecorder;
+    private boolean isRecording = false;
 
 
     /** A safe way to get an instance of the Camera object. */
@@ -93,37 +98,26 @@ public class FullscreenActivity extends AppCompatActivity {
         // Create an instance of Camera
         mCamera = getCameraInstance();
 
+        if(mCamera == null ){
+            Log.e(LOG_TAG, "camera not avaiable");
+            return;
+        }
+
         // Create our Preview view and set it as the content of our activity.
         mPreview = new CameraPreview(this, mCamera);
         FrameLayout preview = (FrameLayout) findViewById(R.id.camera_preview);
         preview.addView(mPreview);
 
+        mPreview.setOnClickListener(new View.OnClickListener(){
+            @Override
+            public void onClick(View v) {
+//                toggle();
+            }
+        });
 
         mVisible = true;
         mControlsView = findViewById(R.id.fullscreen_content_controls);
-//        mContentView = findViewById(R.id.fullscreen_content);
 
-//        mLoginButton = (LoginButton) findViewById(R.id.login_button);
-//        mLoginButton.setReadPermissions("publish_actions");
-//        If using in a fragment
-//        mLoginButton.setFragment(this);
-        // Other app specific specialization
-
-
-//        Set up the user interaction to manually show or hide the system UI.
-//        mContentView.setOnClickListener(new View.OnClickListener() {
-//            @Override
-//            public void onClick(View view) {
-//                 toggle();
-//                createRTMPClient();
-//            }
-//        });
-
-//         Upon interacting with UI controls, delay any scheduled hide()
-//         operations to prevent the jarring behavior of controls going away
-//         while interacting with the UI.
-//         findViewById(R.id.dummy_button).setOnTouchListener(mDelayHideTouchListener);
-//         createRtmpClient();
         findViewById(R.id.dummy_button).setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
@@ -153,12 +147,43 @@ public class FullscreenActivity extends AppCompatActivity {
                             public void onCompleted(GraphResponse response) {
                                 // Insert your code here
                                 createRTMPClient(response);
+//                                startRecording();
                             }
                         });
                 request.executeAsync();
             }
         });
     }
+
+    private void startRecording(){
+        if (isRecording) {
+            // stop recording and release camera
+            mMediaRecorder.stop();  // stop the recording
+            releaseMediaRecorder(); // release the MediaRecorder object
+            mCamera.lock();         // take camera access back from MediaRecorder
+
+            // inform the user that recording has stopped
+//                    setCaptureButtonText("Capture");
+
+            isRecording = false;
+        } else {
+            // initialize video camera
+            if (prepareVideoRecorder()) {
+                // Camera is available and unlocked, MediaRecorder is prepared,
+                // now you can start recording
+                mMediaRecorder.start();
+
+                // inform the user that recording has started
+//                        setCaptureButtonText("Stop");
+                isRecording = true;
+            } else {
+                // prepare didn't work, release the camera
+                releaseMediaRecorder();
+                // inform user
+            }
+        }
+    }
+
 
 
     @Override
@@ -204,8 +229,73 @@ public class FullscreenActivity extends AppCompatActivity {
 
     }
 
+    private boolean prepareVideoRecorder(){
+
+        mCamera = getCameraInstance();
+        mMediaRecorder = new MediaRecorder();
+
+        // Step 1: Unlock and set camera to MediaRecorder
+        mCamera.unlock();
+        mMediaRecorder.setCamera(mCamera);
+
+        // Step 2: Set sources
+        mMediaRecorder.setAudioSource(MediaRecorder.AudioSource.CAMCORDER);
+        mMediaRecorder.setVideoSource(MediaRecorder.VideoSource.CAMERA);
+
+        // Step 3: Set a CamcorderProfile (requires API Level 8 or higher)
+        mMediaRecorder.setProfile(CamcorderProfile.get(CamcorderProfile.QUALITY_HIGH));
+
+        // Step 4: Set output file
+        // mMediaRecorder.setOutputFile(getOutputMediaFile(MEDIA_TYPE_VIDEO).toString());
+
+        // Step 5: Set the preview output
+        mMediaRecorder.setPreviewDisplay(mPreview.getHolder().getSurface());
+
+        // Step 6: Prepare configured MediaRecorder
+        try {
+            mMediaRecorder.prepare();
+        } catch (IllegalStateException e) {
+            Log.d(LOG_TAG, "IllegalStateException preparing MediaRecorder: " + e.getMessage());
+            releaseMediaRecorder();
+            return false;
+        } catch (IOException e) {
+            Log.d(LOG_TAG, "IOException preparing MediaRecorder: " + e.getMessage());
+            releaseMediaRecorder();
+            return false;
+        }
+        return true;
+    }
+
+    @Override
+    protected void onPause() {
+        super.onPause();
+        Log.d(LOG_TAG, "on pause");
+        releaseMediaRecorder();       // if you are using MediaRecorder, release it first
+//        releaseCamera();              // release the camera immediately on pause event
+    }
+
+    private void releaseMediaRecorder(){
+        if (mMediaRecorder != null) {
+            mMediaRecorder.reset();   // clear recorder configuration
+            mMediaRecorder.release(); // release the recorder object
+            mMediaRecorder = null;
+            mCamera.lock();           // lock camera for later use
+        }
+    }
+
+    private void releaseCamera(){
+        mCamera.setPreviewCallback(null);
+        mPreview.getHolder().removeCallback(mPreview);
+        if (mCamera != null){
+            mCamera.release();        // release the camera for other applications
+            mCamera = null;
+        }
+    }
+
     protected void createRTMPClient(GraphResponse response) {
+
         String streamUrl = null;
+
         try {
             streamUrl = response.getJSONObject().get("stream_url").toString();
         } catch (JSONException e) {
@@ -221,6 +311,10 @@ public class FullscreenActivity extends AppCompatActivity {
 
         final RTMPMuxer mMuxer = new RTMPMuxer();
         mMuxer.open(streamUrl, 360, 480);
+
+        Integer isConnected = mMuxer.isConnected();
+
+        Log.d(LOG_TAG, "is connected? " + String.valueOf(isConnected));
 
         Timer timer = new Timer();
 

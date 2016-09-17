@@ -12,13 +12,14 @@ import java.io.IOException;
 public class CameraPreview extends SurfaceView implements SurfaceHolder.Callback {
     private SurfaceHolder mHolder;
     private Camera mCamera;
-    private final static String TAG = "Camera";
+    private final static String LOG_TAG = "Camera";
 
     public CameraPreview(Context context, Camera camera) {
         super(context);
         mCamera = camera;
 
         mCamera.setDisplayOrientation(90);
+//        mCamera.setPreviewCallback();
         // Install a SurfaceHolder.Callback so we get notified when the
         // underlying surface is created and destroyed.
         mHolder = getHolder();
@@ -33,7 +34,7 @@ public class CameraPreview extends SurfaceView implements SurfaceHolder.Callback
             mCamera.setPreviewDisplay(holder);
             mCamera.startPreview();
         } catch (IOException e) {
-            Log.d(TAG, "Error setting camera preview: " + e.getMessage());
+            Log.d(LOG_TAG, "Error setting camera preview: " + e.getMessage());
         }
     }
 
@@ -42,6 +43,7 @@ public class CameraPreview extends SurfaceView implements SurfaceHolder.Callback
     }
 
     public void surfaceChanged(SurfaceHolder holder, int format, int w, int h) {
+        Log.d(LOG_TAG, "surfaceChanged");
         // If your preview can change or rotate, take care of those events here.
         // Make sure to stop the preview before resizing or reformatting it.
 
@@ -66,7 +68,7 @@ public class CameraPreview extends SurfaceView implements SurfaceHolder.Callback
             mCamera.startPreview();
 
         } catch (Exception e){
-            Log.d(TAG, "Error starting camera preview: " + e.getMessage());
+            Log.d(LOG_TAG, "Error starting camera preview: " + e.getMessage());
         }
     }
 }
