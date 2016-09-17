@@ -64,7 +64,7 @@ public class FullscreenActivity extends AppCompatActivity {
     private static final String LOG_TAG = "FBSDK";
     private View mContentView;
     private View mControlsView;
-    private boolean mVisible;
+    private boolean mVisible = true;
     private LoginButton mLoginButton;
     private CallbackManager callbackManager;
     private Camera mCamera;
@@ -94,7 +94,13 @@ public class FullscreenActivity extends AppCompatActivity {
         setupFBSDK();
         setContentView(R.layout.activity_fullscreen);
 
+        setupCameraPreview();
+        setupStartButton();
 
+        mControlsView = findViewById(R.id.fullscreen_content_controls);
+    }
+
+    private void setupCameraPreview() {
         // Create an instance of Camera
         mCamera = getCameraInstance();
 
@@ -114,10 +120,9 @@ public class FullscreenActivity extends AppCompatActivity {
 //                toggle();
             }
         });
+    }
 
-        mVisible = true;
-        mControlsView = findViewById(R.id.fullscreen_content_controls);
-
+    private void setupStartButton() {
         findViewById(R.id.dummy_button).setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
