@@ -23,7 +23,6 @@ import com.facebook.FacebookException;
 import com.facebook.FacebookSdk;
 import com.facebook.GraphRequest;
 import com.facebook.GraphResponse;
-import com.facebook.appevents.AppEventsLogger;
 import com.facebook.login.LoginManager;
 import com.facebook.login.LoginResult;
 import com.facebook.login.widget.LoginButton;
@@ -72,7 +71,10 @@ public class FullscreenActivity extends AppCompatActivity {
     private MediaRecorder mMediaRecorder;
     private boolean isRecording = false;
 
-    Integer isConnected = 0;
+    private Integer isConnected = 0;
+    private RTMPMuxer mMuxer;
+
+    private String currentVideoID;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -89,10 +91,38 @@ public class FullscreenActivity extends AppCompatActivity {
         mControlsView = findViewById(R.id.fullscreen_content_controls);
     }
 
+    private void streamToRTMPserver(byte[] data) {
+        if( isConnected == 0){
+            return;
+        }
+//        GraphRequest request = GraphRequest.newPostRequest(
+//                AccessToken.getCurrentAccessToken(),
+//                "/me/live_videos",
+//                params,
+//                new GraphRequest.Callback() {
+//                    @Override
+//                    public void onCompleted(GraphResponse response) {
+//                        // Insert your code here
+//                        Log.d(LOG_TAG, response.toString());
+//                        createRTMPClient(response);
+////                                startRecording();
+//                    }
+//                });
+//        request.executeAsync();
+        mMuxer.writeVideo(data,0, 1, 3);
+//        Log.d(LOG_TAG, "streamToRTMPserver");
+    }
+
     private void setupCameraPreview() {
 
         // Create our Preview view and set it as the content of our activity.
-        mPreview = new CameraPreview(this);
+        mPreview = new CameraPreview(this, new Camera.PreviewCallback() {
+            @Override
+            public void onPreviewFrame(byte[] data, Camera camera) {
+                streamToRTMPserver(data);
+            }
+        });
+
         FrameLayout preview = (FrameLayout) findViewById(R.id.camera_preview);
         preview.addView(mPreview);
 
@@ -124,7 +154,7 @@ public class FullscreenActivity extends AppCompatActivity {
 
                 JSONObject params = null;
                 try {
-                    params = new JSONObject("{}");
+                    params = new JSONObject("{published:TRUE}");
                 } catch (Exception e) {
                     Log.e("fuck", "fucking json object creation failed!");
                     Log.e("fuck", "this error handle sucks");
@@ -138,6 +168,7 @@ public class FullscreenActivity extends AppCompatActivity {
                             @Override
                             public void onCompleted(GraphResponse response) {
                                 // Insert your code here
+                                Log.d(LOG_TAG, response.toString());
                                 createRTMPClient(response);
 //                                startRecording();
                             }
@@ -146,36 +177,6 @@ public class FullscreenActivity extends AppCompatActivity {
             }
         });
     }
-
-    private void startRecording(){
-        if (isRecording) {
-            // stop recording and release camera
-            mMediaRecorder.stop();  // stop the recording
-            releaseMediaRecorder(); // release the MediaRecorder object
-            mCamera.lock();         // take camera access back from MediaRecorder
-
-            // inform the user that recording has stopped
-//                    setCaptureButtonText("Capture");
-
-            isRecording = false;
-        } else {
-            // initialize video camera
-            if (prepareVideoRecorder()) {
-                // Camera is available and unlocked, MediaRecorder is prepared,
-                // now you can start recording
-                mMediaRecorder.start();
-
-                // inform the user that recording has started
-//                        setCaptureButtonText("Stop");
-                isRecording = true;
-            } else {
-                // prepare didn't work, release the camera
-                releaseMediaRecorder();
-                // inform user
-            }
-        }
-    }
-
 
 
     @Override
@@ -221,68 +222,14 @@ public class FullscreenActivity extends AppCompatActivity {
 
     }
 
-    private boolean prepareVideoRecorder(){
-
-//        mCamera = getCameraInstance();
-        mMediaRecorder = new MediaRecorder();
-
-        // Step 1: Unlock and set camera to MediaRecorder
-        mCamera.unlock();
-        mMediaRecorder.setCamera(mCamera);
-
-        // Step 2: Set sources
-        mMediaRecorder.setAudioSource(MediaRecorder.AudioSource.CAMCORDER);
-        mMediaRecorder.setVideoSource(MediaRecorder.VideoSource.CAMERA);
-
-        // Step 3: Set a CamcorderProfile (requires API Level 8 or higher)
-        mMediaRecorder.setProfile(CamcorderProfile.get(CamcorderProfile.QUALITY_HIGH));
-
-        // Step 4: Set output file
-        // mMediaRecorder.setOutputFile(getOutputMediaFile(MEDIA_TYPE_VIDEO).toString());
-
-        // Step 5: Set the preview output
-        mMediaRecorder.setPreviewDisplay(mPreview.getHolder().getSurface());
-
-        // Step 6: Prepare configured MediaRecorder
-        try {
-            mMediaRecorder.prepare();
-        } catch (IllegalStateException e) {
-            Log.d(LOG_TAG, "IllegalStateException preparing MediaRecorder: " + e.getMessage());
-            releaseMediaRecorder();
-            return false;
-        } catch (IOException e) {
-            Log.d(LOG_TAG, "IOException preparing MediaRecorder: " + e.getMessage());
-            releaseMediaRecorder();
-            return false;
-        }
-        return true;
-    }
-
     @Override
     protected void onPause() {
         super.onPause();
         Log.d(LOG_TAG, "on pause");
-        releaseMediaRecorder();       // if you are using MediaRecorder, release it first
+//        releaseMediaRecorder();       // if you are using MediaRecorder, release it first
 //        releaseCamera();              // release the camera immediately on pause event
     }
 
-    private void releaseMediaRecorder(){
-        if (mMediaRecorder != null) {
-            mMediaRecorder.reset();   // clear recorder configuration
-            mMediaRecorder.release(); // release the recorder object
-            mMediaRecorder = null;
-            mCamera.lock();           // lock camera for later use
-        }
-    }
-
-    private void releaseCamera(){
-        mCamera.setPreviewCallback(null);
-        mPreview.getHolder().removeCallback(mPreview);
-        if (mCamera != null){
-            mCamera.release();        // release the camera for other applications
-            mCamera = null;
-        }
-    }
 
     protected void createRTMPClient(GraphResponse response) {
 
@@ -290,6 +237,7 @@ public class FullscreenActivity extends AppCompatActivity {
 
         try {
             streamUrl = response.getJSONObject().get("stream_url").toString();
+            currentVideoID = response.getJSONObject().get("id").toString();
         } catch (JSONException e) {
             e.printStackTrace();
         }
@@ -301,18 +249,22 @@ public class FullscreenActivity extends AppCompatActivity {
 
         Log.d(LOG_TAG, "streamUrl: " + streamUrl);
 
-        final RTMPMuxer mMuxer = new RTMPMuxer();
+        mMuxer = new RTMPMuxer();
         mMuxer.open(streamUrl, 360, 480);
 
-        Log.d(LOG_TAG, "is connected? " + String.valueOf(isConnected));
+//        Log.d(LOG_TAG, "is connected? " + String.valueOf(isConnected));
 
-        Timer timer = new Timer();
+        final Timer timer = new Timer();
 
         timer.schedule( new TimerTask() {
             public void run() {
                 isConnected = mMuxer.isConnected();
-
                 Log.d(LOG_TAG, "is connected? " + String.valueOf(isConnected));
+
+                if(isConnected == 1){
+                    timer.cancel();
+                }
+
             }
         }, 0, 1000);
 

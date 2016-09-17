@@ -12,7 +12,30 @@ import java.io.IOException;
 public class CameraPreview extends SurfaceView implements SurfaceHolder.Callback {
     private SurfaceHolder mHolder;
     private Camera mCamera;
-    private final static String LOG_TAG = "Camera";
+    private final static String LOG_TAG = "FBSDK camera";
+    private Camera.PreviewCallback mPreviewCallback;
+
+    public CameraPreview(Context context, Camera.PreviewCallback previewCallback ) {
+        super(context);
+
+        // Create an instance of Camera
+        mCamera = getCameraInstance();
+        mPreviewCallback = previewCallback;
+
+        if(mCamera == null ){
+            Log.e(LOG_TAG, "camera not avaiable");
+            return;
+        }
+        mCamera.setDisplayOrientation(90);
+
+//        mCamera.setPreviewCallback();
+        // Install a SurfaceHolder.Callback so we get notified when the
+        // underlying surface is created and destroyed.
+        mHolder = getHolder();
+        mHolder.addCallback(this);
+        // deprecated setting, but required on Android versions prior to 3.0
+        mHolder.setType(SurfaceHolder.SURFACE_TYPE_PUSH_BUFFERS);
+    }
 
     /** A safe way to get an instance of the Camera object. */
     public static Camera getCameraInstance(){
@@ -26,29 +49,17 @@ public class CameraPreview extends SurfaceView implements SurfaceHolder.Callback
         return c; // returns null if camera is unavailable
     }
 
-    public CameraPreview(Context context) {
-        super(context);
-
-        // Create an instance of Camera
-        mCamera = getCameraInstance();
-
-        if(mCamera == null ){
-            Log.e(LOG_TAG, "camera not avaiable");
-            return;
-        }
-        mCamera.setDisplayOrientation(90);
-//        mCamera.setPreviewCallback();
-        // Install a SurfaceHolder.Callback so we get notified when the
-        // underlying surface is created and destroyed.
-        mHolder = getHolder();
-        mHolder.addCallback(this);
-        // deprecated setting, but required on Android versions prior to 3.0
-        mHolder.setType(SurfaceHolder.SURFACE_TYPE_PUSH_BUFFERS);
-    }
-
     public void surfaceCreated(SurfaceHolder holder) {
         // The Surface has been created, now tell the camera where to draw the preview.
         Log.d(LOG_TAG, "surfaceCreated");
+//        mCamera.setPreviewCallback(new Camera.PreviewCallback() {
+//            @Override
+//            public void onPreviewFrame(byte[] data, Camera camera) {
+//                Log.e(LOG_TAG, "onPreviewFrame");
+//            }
+//        });
+
+
         try {
             mCamera.setPreviewDisplay(holder);
             mCamera.startPreview();
@@ -84,6 +95,7 @@ public class CameraPreview extends SurfaceView implements SurfaceHolder.Callback
 
         // start preview with new settings
         try {
+            mCamera.setPreviewCallback(mPreviewCallback);
             mCamera.setPreviewDisplay(mHolder);
             mCamera.startPreview();
 
