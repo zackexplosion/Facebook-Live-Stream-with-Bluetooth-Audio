@@ -72,18 +72,7 @@ public class FullscreenActivity extends AppCompatActivity {
     private MediaRecorder mMediaRecorder;
     private boolean isRecording = false;
 
-
-    /** A safe way to get an instance of the Camera object. */
-    public static Camera getCameraInstance(){
-        Camera c = null;
-        try {
-            c = Camera.open(); // attempt to get a Camera instance
-        }
-        catch (Exception e){
-            // Camera is not available (in use or does not exist)
-        }
-        return c; // returns null if camera is unavailable
-    }
+    Integer isConnected = 0;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -101,16 +90,9 @@ public class FullscreenActivity extends AppCompatActivity {
     }
 
     private void setupCameraPreview() {
-        // Create an instance of Camera
-        mCamera = getCameraInstance();
-
-        if(mCamera == null ){
-            Log.e(LOG_TAG, "camera not avaiable");
-            return;
-        }
 
         // Create our Preview view and set it as the content of our activity.
-        mPreview = new CameraPreview(this, mCamera);
+        mPreview = new CameraPreview(this);
         FrameLayout preview = (FrameLayout) findViewById(R.id.camera_preview);
         preview.addView(mPreview);
 
@@ -126,6 +108,11 @@ public class FullscreenActivity extends AppCompatActivity {
         findViewById(R.id.dummy_button).setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
+                if(isConnected == 1){
+                    Log.d(LOG_TAG, "already connected to RTMP server");
+                    return;
+                }
+
                 AccessToken accessToken = AccessToken.getCurrentAccessToken();
 
                 if (accessToken == null){
@@ -236,7 +223,7 @@ public class FullscreenActivity extends AppCompatActivity {
 
     private boolean prepareVideoRecorder(){
 
-        mCamera = getCameraInstance();
+//        mCamera = getCameraInstance();
         mMediaRecorder = new MediaRecorder();
 
         // Step 1: Unlock and set camera to MediaRecorder
@@ -317,15 +304,13 @@ public class FullscreenActivity extends AppCompatActivity {
         final RTMPMuxer mMuxer = new RTMPMuxer();
         mMuxer.open(streamUrl, 360, 480);
 
-        Integer isConnected = mMuxer.isConnected();
-
         Log.d(LOG_TAG, "is connected? " + String.valueOf(isConnected));
 
         Timer timer = new Timer();
 
         timer.schedule( new TimerTask() {
             public void run() {
-                Integer isConnected = mMuxer.isConnected();
+                isConnected = mMuxer.isConnected();
 
                 Log.d(LOG_TAG, "is connected? " + String.valueOf(isConnected));
             }

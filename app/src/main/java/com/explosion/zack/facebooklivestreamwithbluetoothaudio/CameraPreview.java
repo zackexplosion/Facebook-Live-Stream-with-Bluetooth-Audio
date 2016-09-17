@@ -14,10 +14,28 @@ public class CameraPreview extends SurfaceView implements SurfaceHolder.Callback
     private Camera mCamera;
     private final static String LOG_TAG = "Camera";
 
-    public CameraPreview(Context context, Camera camera) {
-        super(context);
-        mCamera = camera;
+    /** A safe way to get an instance of the Camera object. */
+    public static Camera getCameraInstance(){
+        Camera c = null;
+        try {
+            c = Camera.open(); // attempt to get a Camera instance
+        }
+        catch (Exception e){
+            // Camera is not available (in use or does not exist)
+        }
+        return c; // returns null if camera is unavailable
+    }
 
+    public CameraPreview(Context context) {
+        super(context);
+
+        // Create an instance of Camera
+        mCamera = getCameraInstance();
+
+        if(mCamera == null ){
+            Log.e(LOG_TAG, "camera not avaiable");
+            return;
+        }
         mCamera.setDisplayOrientation(90);
 //        mCamera.setPreviewCallback();
         // Install a SurfaceHolder.Callback so we get notified when the
