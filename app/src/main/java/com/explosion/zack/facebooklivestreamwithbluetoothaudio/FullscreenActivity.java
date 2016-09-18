@@ -132,7 +132,13 @@ public class FullscreenActivity extends AppCompatActivity {
 
                 byte[] encodedData = encoder.offerEncoder(data);
 
-                int isWrited = mMuxer.writeVideo(encodedData, 0, 1, 3);
+                int isWrited = mMuxer.writeVideo(encodedData, 0, encodedData.length, (int) (System.currentTimeMillis() / 1000L));
+
+//                if(isWrited == 0){
+//                    Log.d(LOG_TAG, "writeVideo success");
+//                }else{
+//                    Log.d(LOG_TAG, "writeVideo failed");
+//                }
             }
         });
 
