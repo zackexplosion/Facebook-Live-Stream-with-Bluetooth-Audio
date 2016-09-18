@@ -61,6 +61,9 @@ public class FullscreenActivity extends AppCompatActivity {
      */
     private static final int UI_ANIMATION_DELAY = 300;
     private static final String LOG_TAG = "FBSDK";
+    private final static int DEFAULT_FRAME_RATE = 15;
+    private final static int DEFAULT_BIT_RATE = 500000;
+
     private View mContentView;
     private View mControlsView;
     private boolean mVisible = true;
@@ -75,6 +78,8 @@ public class FullscreenActivity extends AppCompatActivity {
     private RTMPMuxer mMuxer;
 
     private String currentVideoID;
+    private AvcEncoder encoder;
+
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -95,31 +100,39 @@ public class FullscreenActivity extends AppCompatActivity {
         if( isConnected == 0){
             return;
         }
-//        GraphRequest request = GraphRequest.newPostRequest(
-//                AccessToken.getCurrentAccessToken(),
-//                "/me/live_videos",
-//                params,
-//                new GraphRequest.Callback() {
-//                    @Override
-//                    public void onCompleted(GraphResponse response) {
-//                        // Insert your code here
-//                        Log.d(LOG_TAG, response.toString());
-//                        createRTMPClient(response);
-////                                startRecording();
-//                    }
-//                });
-//        request.executeAsync();
-        mMuxer.writeVideo(data,0, 1, 3);
+
+        byte[] encodedData = encoder.offerEncoder(data);
+
+        int isWrited = mMuxer.writeVideo(encodedData, 0, 1, 3);
+
+        if(isWrited == 0){
+//            Log.d(LOG_TAG, "stream write failed");
+//            Log.d(LOG_TAG, "stream write success");
+        }
+
+
+
+
+//        mMuxer.writeVideo(data,0, 1, 3);
 //        Log.d(LOG_TAG, "streamToRTMPserver");
     }
 
     private void setupCameraPreview() {
+        encoder = new AvcEncoder();
+//        encoder.init(360, 480, DEFAULT_FRAME_RATE, DEFAULT_BIT_RATE);
+        encoder.init(240, 360, DEFAULT_FRAME_RATE, DEFAULT_BIT_RATE);
 
         // Create our Preview view and set it as the content of our activity.
         mPreview = new CameraPreview(this, new Camera.PreviewCallback() {
             @Override
             public void onPreviewFrame(byte[] data, Camera camera) {
-                streamToRTMPserver(data);
+                if( isConnected == 0){
+                    return;
+                }
+
+                byte[] encodedData = encoder.offerEncoder(data);
+
+                int isWrited = mMuxer.writeVideo(encodedData, 0, 1, 3);
             }
         });
 
@@ -132,6 +145,7 @@ public class FullscreenActivity extends AppCompatActivity {
 //                toggle();
             }
         });
+
     }
 
     private void setupStartButton() {
